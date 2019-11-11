@@ -1,0 +1,110 @@
+design-w3l/*--
+Author: W3layouts
+Author URL: http://w3layouts.com
+License: Creative Commons Attribution 3.0 Unported
+License URL: http://creativecommons.org/licenses/by/3.0/
+--*/
+/* reset */
+
+/* start editing from here */
+
+img{max-width:100%;}
+/*end reset*/
+/****-----start-body----****/
+body{
+text-align: center;
+background: url("../images/b4.jpg") 0px 0px no-repeat;
+background-size:cover;
+background-attachment: fixed;
+}
+.login-main{
+padding:30px;
+}
+
+.login-header {
+color: #ffffff;
+text-align: center;
+padding-bottom:75px;
+}
+
+
+.header h1 {
+    font-size: 50px;
+    color: #fff;
+    font-family: 'Cormorant SC', serif;
+    letter-spacing: 3px;
+    margin: 0 auto;
+    text-shadow: 1px 1px 4px #000;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+
+.design-w3l{
+width:40%;
+margin:0 auto;
+}
+
+.login-form {
+    padding: 50px 40px;
+    text-align: center;
+    margin:0px;
+    color: #000;
+	margin:0 auto;
+}
+
+.padding {
+margin: 20px 0 50px;
+}
+
+.login-form input[type="text"], .login-form input[type="password"] {
+padding: 13px 10px;
+width: 92.5%;
+font-size: 25px;
+outline: none;
+background:transparent;
+border:0px;
+border-bottom: 1px solid #fff;
+border-radius: 0px;
+font-family: 'Open Sans', sans-serif;
+letter-spacing:1.6px;
+color:#fff;
+}
+
+.login-form input[type="submit"]{
+width:190px;
+font-size: 18px;
+padding: 10px 20px;
+letter-spacing:1.2px;
+border: none;
+text-transform: capitalize;
+outline: none;
+background: #03A9F4;
+color: #fff;
+cursor: pointer;
+margin-left: 60px;
+font-family: 'Open Sans', sans-serif;
+-webkit-transition-duration: 0.9s;
+border-radius: 20px;
+transition-duration: 0.9s;
+}
+.login-form input[type="submit"]:hover {
+ -webkit-transition-duration: 0.9s;
+ transition-duration: 0.9s;
+ background:rgba(91, 157, 214, 0.76);
+}
+.register {
+    color:#ff0000;
+    font-size:18px;
+    padding-left: 20px;
+}
+
+
+
+
+
+
+
+
+
+

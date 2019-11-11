@@ -1,0 +1,37 @@
+<!--
+Author: W3layouts
+Author URL: http://w3layouts.com
+License: Creative Commons Attribution 3.0 Unported
+License URL: http://creativecommons.org/licenses/by/3.0/
+-->
+{% load staticfiles %}　
+<!DOCTYPE html>
+<html>
+
+<head>
+<title> Master login Form Responsive Widget Template  :: w3layouts</title>
+
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="{% static 'css/style.css' %}" rel="stylesheet" type="text/css" media="all" />
+</head>
+<body>
+	<div class="login-main">
+		<div class="login-header">
+			<h1>IPSOS Translation</h1>
+		</div>
+
+		<div class="design-w3l">
+			<div class="login-form">
+				<form action="/login/" method="post">
+                    {% csrf_token %}
+					<input type="text" name="username" class="padding" placeholder="用户名" required=""/>
+					<input type="password"  name="password" class="padding" placeholder="密码" required=""/>
+					<input type="submit" value="登录">
+					<a href="forgetpassword.html" class="register">忘记密码？</a>
+				</form>
+			</div>
+		</div>
+	</div>
+    <p style="color: red">{{ error }}</p>
+</body>
+</html>

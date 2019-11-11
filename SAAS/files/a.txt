@@ -1,0 +1,18 @@
+----------------
+----------------
+----------------
+输入格式为python python文件路径 -load 要读取的文件路径（csv后缀） -save 要保存的文件路径（xlsx后缀)
+输入的是完整的不含中文的英文路径，不包含空格和横杠，如D:\Translate.xlsx
+完整例子如： python D:\google_translate_1031.py -load D:\thefileloaded.csv -save D:\thefilesaved.xlsx
+读取的时候是csv文件保存的时候是excel文件.也可以直接打开源码修改第65行
+----------------
+----------------
+----------------
+正在读取
+update main_origin_files set progress=55 where username="hhy" and filename="out2019-11-1021:43:45.430695.xlsx"
+update main_origin_files set progress=70 where username="hhy" and filename="out2019-11-1021:43:45.430695.xlsx"
+update main_origin_files set progress=100 where username="hhy" and filename="out2019-11-1021:43:45.430695.xlsx"
+/Users/lewishhy/Desktop/django-project/files/hhy/target/out2019-11-1021:43:45.430695翻译.xlsx out2019-11-1021:43:45.430695翻译.xlsx 1
+翻译结束
+update main_origin_files set progress=100,status=2 where filename="out2019-11-1021:43:45.430695.xlsx" and username="hhy"
+insert main_translated_files values(null,"out2019-11-1021:43:45.430695.xlsx","out2019-11-1021:43:45.430695翻译.xlsx","hhy")

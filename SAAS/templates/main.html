@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>main</title>
+    <style type="text/css">
+    </style>
+</head>
+<script src="https://cdn.staticfile.org/jquery/1.10.2/jquery.min.js">
+</script>
+<script>
+$(document).ready(function(){
+    setInterval(function(){
+        var progresses = document.getElementsByTagName('progress');
+        var progresses = document.getElementsByTagName('progress');
+        var downloads = document.getElementsByClassName('download');
+        var username = "{{ username }}";
+        var files = [];
+        for(var i=0;i<progresses.length;i++){
+            files[i] = progresses[i].id;
+        }
+        $.ajax({
+            type: "POST",
+            url: "/main/test/",
+            data: {csrfmiddlewaretoken: '{{ csrf_token }}',username:username,files:files.join(".$#$#$.")},
+            success: function(msg){
+                var new_progresses = msg.split(',');
+                for(var i=0;i<progresses.length;i++){
+                    progresses[i].value=new_progresses[i];
+                    if(progresses[i].value==100){
+                        downloads[i].style.visibility="visible";
+                    }
+                    else{
+                        downloads[i].style.visibility="hidden";
+                    }
+                }
+            }
+        });
+    },1000);
+});
+</script>
+
+<body style="background:silver;padding:0px;margin: 0px;">
+    <div class="head" style="padding-left: 30px;padding-top: 20px;padding-bottom:20px;background: darkgray">
+        <span style="font-size:30px;">{{ username }}</span>
+        <form enctype="multipart/form-data" method="post" action="upload/" style="float: right;margin-right: 77%;">
+            {% csrf_token %}
+            <div>
+                <input type="file" name="myfile" value="文件"/>
+            </div>
+            <input type="submit" value="上传" style="width:60.97px"/>
+        </form>
+        <button id="logout" style="position: absolute;top:30px;right:50px;">
+            <a href="/login" style="text-decoration:none;">登出</a>
+        </button>
+    </div>
+    <div>
+        <div style="padding-left: 20px;padding-top: 50px;">
+            <form method="post" action="change_time/">
+                {% csrf_token %}
+                <input type="date" name="time_start" value="{{ time.0 }}" style="width: 200px;font-size: 18px"/><span style="padding-left:5px">~</span>
+                <input type="date" name="time_end" value="{{ time.1 }}" style="width: 200px;font-size: 18px"/>
+                <input type="submit" value="调整时间" style="font-size: 20px"/>
+            </form>
+        </div>
+        <ul style="width: 100%;padding-left:8px;">
+            {% for content in files %}
+                <li style="list-style-type:none; width: 99%;">
+                    <table style="padding-left: 200px;width:100%;list-style-type:none;background:{{ content.5 }};">
+                        <td style="width: 150px;"><p>{{ content.0 }}</p></td>
+                        <td style="width: 100px"><p>{{ content.4 }}</p></td>
+                        <td style="width: 100px">
+                            <form method="post" action="translate/">
+                                {% csrf_token %}
+                                <input type="text" name="filename" value="{{ content.1 }}" style="visibility: hidden;width: 0px"/>
+                                <input type="submit" value="翻译" style="font-size: 40px;"/>
+                            </form>
+                        </td>
+                        <td style="width: 100px">
+                            <progress id="{{ content.1 }}" value="{{ content.2 }}" max='100'></progress>
+                        </td>
+                        <td style="width: 100px">
+                            <form method="post" action="download/" style="visibility: {{ content.3 }}">
+                                {% csrf_token %}
+                                <input type="text" name="filename" value="{{ content.1 }}" style="visibility: hidden;width: 0px"/>
+                                <input class="download" type="submit" value="下载翻译文件" style="font-size: 40px"/>
+                            </form>
+                        </td>
+                    </table>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+</body>
+</html>
