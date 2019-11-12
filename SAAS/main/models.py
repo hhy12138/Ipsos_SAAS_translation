@@ -7,6 +7,9 @@ class origin_files(models.Model):
     status = models.IntegerField()#0未在翻译，1正在翻译
     progress = models.IntegerField()
     time = models.DateTimeField()
+    pid = models.CharField(max_length=10,default=-1)
+    cols = models.IntegerField(default=0)
+    completed_chars = models.IntegerField(default=0)
 
 class translated_files(models.Model):
     origin_filename = models.CharField(max_length=128)

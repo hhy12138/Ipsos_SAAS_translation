@@ -1,14 +1,28 @@
 import datetime
+import signal
 
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render, redirect
 import os
 import time
+import _thread
+import pandas as pd
 
 from main.models import origin_files, translated_files
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Create your views here.
+def thread_translate(file,command):
+    try:
+        code = os.system(command)
+        if code!=0:
+            file.progress = 0
+            file.status = 3
+            file.save()
+    except:
+        file.progress = 0
+        file.status = 3
+        file.save()
 def main(request):
     if request.COOKIES.get("username") is None:
         return redirect("/login")
@@ -20,7 +34,6 @@ def main(request):
         time_end = time.strftime("%Y-%m-%d", time.localtime(time.time()+3600*24))
     else:
         time_end = request.COOKIES.get("time_end")
-    print(time_start,time_end)
     username = request.COOKIES.get("username")
     files = list()
     all_files = origin_files.objects.all().order_by('-time').filter(username__exact=username,time__gte=time_start,time__lte=time_end)
@@ -42,6 +55,17 @@ def main(request):
             tmp.append("#eeeeee")
         else:
             tmp.append("#dddddd")
+        if file.status==3:
+            tmp.append("翻译中断")
+        else:
+            tmp.append("")
+        if file.status==1:
+            tmp.append("visible")
+        else:
+            tmp.append("hidden")
+        tmp.append(str(file.cols))
+        tmp.append(str(file.completed_chars))
+        print(tmp)
         files.append(tmp)
         i+=1
     context = {"username":username,"files":files,"time":[time_start,time_end]}
@@ -63,11 +87,17 @@ def upload(request):
             for chunk in myFile.chunks():
                 destination.write(chunk)
         try:
+            df = pd.read_csv(filepath)
+        except:
+            df = pd.read_excel(filepath)
+        cols = df.shape[0]
+        try:
             file = origin_files()
             file.filename = filename
             file.username = username
             file.status = 0
             file.progress = 0
+            file.cols = cols
             file.time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
             file.save()
         except Exception as e:
@@ -83,7 +113,6 @@ def change_time(request):
     if request.method == "POST":
         time_start = request.POST.get("time_start")
         time_end = request.POST.get("time_end")
-        print()
         response = HttpResponseRedirect("/main")
         response.set_cookie("time_start",time_start,36000)
         response.set_cookie("time_end", time_end, 36000)
@@ -105,10 +134,37 @@ def translate(request):
             exe = os.path.join(BASE_DIR,"main","google_translate.py")
             origin = os.path.join(BASE_DIR,'files',username,'origin',filename)
             target = os.path.splitext(filename)[0]+'翻译'+os.path.splitext(filename)[1]
-            log = os.path.join(BASE_DIR,'files','a.txt')
-            pid = os.fork()
-            if pid == 0:
-                os.system("python3 %s -l %s -s %s -m v2 -y win -u %s"%(exe,origin,target,username))
+            #log = os.path.join(BASE_DIR,'files','a.txt')
+            # pid = os.fork()
+            # if pid == 0:
+            #     pid = os.getpid()
+            #     os.system("kill -9 %s"%str(id))
+            #     import pymysql
+            #     conn = pymysql.connect(host="114.67.93.231", port=3306, user="ipsosuser1", password="Ipsos123456!",
+            #                            database="SAAS_translation", charset="utf8")
+            #     cursor = conn.cursor()
+            #     sql = 'update main_origin_files set pid="%s" where filename="%s" and username="%s"'%(id,filename,username)
+            #     cursor.execute(sql)
+            #     conn.commit()
+            #     try:
+            #         tmp = os.system("python3 %s -l %s -s %s -m v2 -y win -u %s"%(exe,origin,target,username))
+            #         if tmp!=0:
+            #             sql = 'update main_origin_files set progress=0,status=3 where filename="%s" and username="%s"' % (
+            #             filename, username)
+            #             cursor.execute(sql)
+            #             conn.commit()
+            #     except:
+            #         sql = 'update main_origin_files set progress=0,status=3 where filename="%s" and username="%s"' % (
+            #             filename, username)
+            #         cursor.execute(sql)
+            #         conn.commit()
+            command = "python3 %s -l %s -s %s -m v2 -y win -u %s"%(exe,origin,target,username)
+            try:
+                _thread.start_new_thread(thread_translate, (file, command,))
+            except:
+                file.status=3
+                file.progress=0
+                file.save()
         return redirect("/main")
 
 def download(request):
@@ -140,5 +196,28 @@ def test(request):
         for file in files:
             origin_file = origin_files.objects.get(username=username,filename=file)
             result.append(str(origin_file.progress))
-        print(result)
     return HttpResponse(','.join(result))
+
+def shutdown(request):
+    if request.method == "POST":
+        filename = request.POST.get("filename")
+        username = request.COOKIES.get("username")
+        print(filename,username)
+        file = origin_files.objects.get(filename=filename,username=username)
+        try:
+            if file.pid!="-1":
+                print("kill -9 %s"%file.pid)
+                os.kill(int(file.pid),signal.SIGKILL)
+            else:
+                pass
+            file.status = 0
+            file.pid = -1
+            file.progress = 0
+            file.save()
+        except Exception as e:
+            file.status = 0
+            file.pid = -1
+            file.progress = 0
+            file.save()
+            print(e)
+        return redirect("/main")

@@ -33,6 +33,7 @@ except:
     from tqdm import tqdm,tqdm_notebook
     import emoji
 completed = 0
+completed_chars = 0
 def google_tran(df,model,syst,filename,username):
     if model!='v2':
         try:
@@ -88,9 +89,11 @@ def google_tran(df,model,syst,filename,username):
 
     trancontent = []
     global completed
+    global completed_chars
     count = df.shape[0]*3
     for i, content in enumerate(tqdm(df['Mention Title'].astype('str'))):
         # print(content)
+        completed_chars+=len(content)
         if len(content) > 15000:
             content = content[:15000]
         try:
@@ -118,15 +121,13 @@ def google_tran(df,model,syst,filename,username):
         progress = min(floor(completed/count*100),99)
         if progress%5==0:
             try:
-                sql = 'update main_origin_files set progress=%s where username="%s" and filename="%s"'%(str(progress),username,filename)
+                sql = 'update main_origin_files set progress=%s,completed_chars=%s where username="%s" and filename="%s"'%(str(progress),str(completed_chars),username,filename)
                 print(sql)
-                conn = pymysql.connect(host="127.0.0.1", port=3306, user="root", password="xwlovehhy", database="SAAS",
+                conn = pymysql.connect(host="localhost", port=3306, user="ipsosuser1", password="Ipsos123456!", database="SAAS_translation",
                                        charset="utf8")
                 cursor  = conn.cursor()
                 cursor.execute(sql)
                 conn.commit()
-                cursor.close()
-                conn.close()
             except Exception as e:
                 print(e)
 
@@ -161,7 +162,7 @@ class MyThread(threading.Thread):
 
 if __name__=='__main__':
     pymysql.install_as_MySQLdb()
-    conn = pymysql.connect(host="127.0.0.1",port=3306,user ="root", password ="xwlovehhy",database ="SAAS",charset ="utf8")
+    conn = pymysql.connect(host="localhost",port=3306,user ="ipsosuser1", password ="Ipsos123456!",database ="SAAS_translation",charset ="utf8")
     cursor = conn.cursor()
     parser = argparse.ArgumentParser()
     parser.add_argument('-l','--loadfile',dest = "load", help = "pleaer enter the loadfile")
@@ -189,6 +190,14 @@ if __name__=='__main__':
     if args.syst is None:
         args.syst = 'win'
     t_data=[]
+    origin = os.path.basename(args.load)
+    target = os.path.basename(args.save)
+    username = args.username
+    pid = os.getpid()
+    print(pid)
+    sql = 'update main_origin_files set pid="%s" where filename="%s" and username="%s"'%(pid,origin,username)
+    cursor.execute(sql)
+    conn.commit()
     #loadfile=r'C:\Users\hehao\google translate\test.xlsx'
     #model='v2'
     #syst='win'
@@ -197,9 +206,6 @@ if __name__=='__main__':
         df=pd.read_csv(args.load).astype('str')
     else:
         df=pd.read_excel(args.load).astype('str')
-    origin = os.path.basename(args.load)
-    target = os.path.basename(args.save)
-    username = args.username
     df = df[['true_country','Date','Time', 'Mention Title']]
     count=int(df.shape[0]/3)
     t_list=[]

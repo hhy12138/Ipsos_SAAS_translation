@@ -82,10 +82,10 @@ DATABASES = {
         #'ENGINE': 'django.db.backends.sqlite3',
         #'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
         'ENGINE':'django.db.backends.mysql',
-        'NAME':'SAAS',
-        'USER':'root',
-        'PASSWORD':'xwlovehhy',
-        'HOST':'127.0.0.1',
+        'NAME':'SAAS_translation',
+        'USER':'ipsosuser1',
+        'PASSWORD':'Ipsos123456!',
+        'HOST':'localhost',
         'PORT':'3306'
     }
 }

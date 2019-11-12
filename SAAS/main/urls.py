@@ -3,6 +3,7 @@ from django.conf.urls import url
 from main import views
 
 urlpatterns = [
+    url(r'shutdown',views.shutdown),
     url(r'^test/',views.test),
     url(r'^change_time/',views.change_time),
     url(r'^upload/',views.upload),

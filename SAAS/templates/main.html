@@ -66,10 +66,12 @@ $(document).ready(function(){
         <ul style="width: 100%;padding-left:8px;">
             {% for content in files %}
                 <li style="list-style-type:none; width: 99%;">
-                    <table style="padding-left: 200px;width:100%;list-style-type:none;background:{{ content.5 }};">
-                        <td style="width: 150px;"><p>{{ content.0 }}</p></td>
-                        <td style="width: 100px"><p>{{ content.4 }}</p></td>
-                        <td style="width: 100px">
+                    <table style="padding-left: 20px;width:100%;list-style-type:none;background:{{ content.5 }};">
+                        <td style="width: 70px;padding-left: 10px;color: red">{{ content.6 }}</td>
+                        <td style="width: 200px;"><p>{{ content.0 }}</p></td>
+                        <td style="width: 200px"><p>{{ content.4 }}</p></td>
+                        <td style="width: 100px"><p>{{ content.8 }}行</p></td>
+                        <td style="width: 80px;">
                             <form method="post" action="translate/">
                                 {% csrf_token %}
                                 <input type="text" name="filename" value="{{ content.1 }}" style="visibility: hidden;width: 0px"/>
@@ -77,8 +79,17 @@ $(document).ready(function(){
                             </form>
                         </td>
                         <td style="width: 100px">
+                            <form method="post" action="shutdown/" style="visibility:{{ content.7 }};">
+                                {% csrf_token %}
+                                <input type="text" name="filename" value="{{ content.1 }}" style="visibility: hidden;width: 0px"/>
+                                <input type="text" name="pid" value="{{ content.8 }}" style="visibility: hidden;width: 0px"/>
+                                <input type="submit" value="终止" style="font-size: 40px;"/>
+                            </form>
+                        </td>
+                        <td style="width: 100px">
                             <progress id="{{ content.1 }}" value="{{ content.2 }}" max='100'></progress>
                         </td>
+                        <td style="width: 200px;padding-left: 20px"><p>已翻译{{ content.9 }}字</p></td>
                         <td style="width: 100px">
                             <form method="post" action="download/" style="visibility: {{ content.3 }}">
                                 {% csrf_token %}
