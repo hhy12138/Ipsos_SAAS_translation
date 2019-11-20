@@ -8,11 +8,35 @@ import time
 import _thread
 import pandas as pd
 
-from main.models import origin_files, translated_files
+from main.models import origin_files, translate_queue, translated_files, translated_chars
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Create your views here.
 def thread_translate(file,command):
+    ticket = translate_queue()
+    ticket.username=file.username
+    ticket.filename=file.filename
+    ticket.save()
+    id = -1
+    while ticket.id != id:
+        try:
+            q = translate_queue.objects.filter(username=ticket.username,filename=ticket.filename)
+        except:
+            return
+        if len(q)==0:
+            file.progress = 0
+            file.status = 3
+            file.save()
+            return
+        try:
+            id = translate_queue.objects.all()[0].id
+        except Exception as e:
+            print(e)
+            print(translate_queue.objects.all().order_by(time))
+            break
+    file.status = 1
+    file.translated_chars = 0
+    file.save()
     try:
         code = os.system(command)
         if code!=0:
@@ -23,6 +47,10 @@ def thread_translate(file,command):
         file.progress = 0
         file.status = 3
         file.save()
+    char_count = translated_chars()
+    char_count.char_num = origin_files.objects.get(username=file.username,filename=file.filename).completed_chars
+    char_count.save()
+    ticket.delete()
 def main(request):
     if request.COOKIES.get("username") is None:
         return redirect("/login")
@@ -37,6 +65,10 @@ def main(request):
     username = request.COOKIES.get("username")
     files = list()
     all_files = origin_files.objects.all().order_by('-time').filter(username__exact=username,time__gte=time_start,time__lte=time_end)
+    all_chars = translated_chars.objects.all().filter(time__gte=time_start,time__lte=time_end)
+    sum = 0
+    for all_char in all_chars:
+        sum+=all_char.char_num
     i = 0
     for file in all_files:
         tmp = list()
@@ -59,16 +91,28 @@ def main(request):
             tmp.append("翻译中断")
         else:
             tmp.append("")
-        if file.status==1:
+        if file.status==1 or file.status==4:
             tmp.append("visible")
         else:
             tmp.append("hidden")
         tmp.append(str(file.cols))
         tmp.append(str(file.completed_chars))
+        sum+=file.completed_chars
+        if file.status==4:
+            try:
+                q=translate_queue.objects.get(username=username,filename=file.filename)
+                result = translate_queue.objects.filter(time__lt=q.time)
+                tmp.append("等待翻译第%s位"%len(result))
+            except Exception as e:
+                tmp.append("")
+                print("sdfsadfsdfs",e)
+        else:
+            tmp.append("")
         print(tmp)
         files.append(tmp)
         i+=1
-    context = {"username":username,"files":files,"time":[time_start,time_end]}
+    sum_money = round(sum*170.1234*10e-7,2)
+    context = {"username":username,"files":files,"time":[time_start,time_end],"sum":sum,"sum_money":sum_money}
     return render(request, "main.html", context=context)
 def upload(request):
     if request.COOKIES.get("username") is None:
@@ -100,6 +144,7 @@ def upload(request):
             file.cols = cols
             file.time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
             file.save()
+            print(file.id)
         except Exception as e:
             print(e)
             return HttpResponse("文件未上传")
@@ -129,7 +174,7 @@ def translate(request):
             error = "当前正在翻译"
         else:
             file.progress=0
-            file.status=1
+            file.status=4#等待
             file.save()
             exe = os.path.join(BASE_DIR,"main","google_translate.py")
             origin = os.path.join(BASE_DIR,'files',username,'origin',filename)
@@ -204,6 +249,13 @@ def shutdown(request):
         username = request.COOKIES.get("username")
         print(filename,username)
         file = origin_files.objects.get(filename=filename,username=username)
+        if file.status==2:
+            return redirect("/main")
+        try:
+            q = translate_queue.objects.get(filename=filename,username=username)
+            q.delete()
+        except:
+            pass
         try:
             if file.pid!="-1":
                 print("kill -9 %s"%file.pid)

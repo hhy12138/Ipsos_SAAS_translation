@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[30]:
-
-
 # coding: utf-8
 import os
 from math import floor
@@ -13,11 +7,13 @@ import pymysql
 import argparse
 import re
 import threading
+import time
+import datetime
 
 try:
     import requests
     import pandas as pd
-    from tqdm import tqdm,tqdm_notebook
+    from tqdm import tqdm, tqdm_notebook
     import emoji
     import openpyxl
 
@@ -30,19 +26,21 @@ except:
     import openpyxl
     import requests
     import pandas as pd
-    from tqdm import tqdm,tqdm_notebook
+    from tqdm import tqdm, tqdm_notebook
     import emoji
 completed = 0
 completed_chars = 0
-def google_tran(df,model,syst,filename,username):
-    if model!='v2':
+judgement = 0#判断线程启动
+
+def google_tran(df, model, syst, filename, username):
+    if model != 'v2':
         try:
             from google.cloud import translate_v3beta1 as translate
         except:
             os.system('pip install google-cloud-translate')
             from google.cloud import translate_v3beta1 as translate
+
     # df=pd.read_csv('export_mentions_200336_335807_2019-08-14T05_28_14.csv').astype('str')
-    
 
     def eliminate_emojis(word):
         return ''.join(c for c in word if c not in emoji.UNICODE_EMOJI)
@@ -51,7 +49,7 @@ def google_tran(df,model,syst,filename,username):
         # language_type = "de"
         url = "https://translation.googleapis.com/language/translate/v2"
         data = {
-            'key': 'AIzaSyBZa_oeKPGR2hlt2BYjm4t8-q85UeIRV1o',
+            'key': 'AIzaSyC67wn4T7LsNtQZnXYBoOUaN3BrfHSn0',
             # 'source': language_type,
             'target': 'zh_cn',
             'q': content,
@@ -62,14 +60,15 @@ def google_tran(df,model,syst,filename,username):
         res = response.json()
         text = res["data"]["translations"][0]["translatedText"]
         return text
-    def tran_v3(content,model,syst):
+
+    def tran_v3(content, model, syst):
         # model = model[2:]
         if model == 'pbmt':
             model = 'base'
         else:
-            model='nmt'
+            model = 'nmt'
         basepath = os.path.abspath('.')
-        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.path.join(basepath,'Ipsos-translation-c094ada851a7.json')
+        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.path.join(basepath, 'Ipsos-translation-c094ada851a7.json')
         client = translate.TranslationServiceClient()
 
         project_id = "ipsos-translation"
@@ -81,7 +80,7 @@ def google_tran(df,model,syst,filename,username):
             parent=parent,
             contents=[content],
             mime_type='text/plain',  # mime types: text/plain, text/html
-            model='projects/ipsos-translation/locations/global/models/general/%s'%model,
+            model='projects/ipsos-translation/locations/global/models/general/%s' % model,
             source_language_code='en-US',
             target_language_code='zh-CN')
         result = response.translations[0].translated_text
@@ -90,17 +89,26 @@ def google_tran(df,model,syst,filename,username):
     trancontent = []
     global completed
     global completed_chars
-    count = df.shape[0]*3
+    global judgement
+    judgement+=1
+    if judgement!=3:
+        time.sleep(5)
+    if judgement!=3:
+        print(judgement)
+        os._exit(-1)
+    count = df.shape[0] * 6
     for i, content in enumerate(tqdm(df['Mention Title'].astype('str'))):
-        # print(content)
-        completed_chars+=len(content)
+        if i == 1:
+            print('=====Here is a thread')
+        completed_chars += len(content)
         if len(content) > 15000:
             content = content[:15000]
+        text = "翻译失败"
         try:
-            if model=='v2':
+            if model == 'v2':
                 text = tran(eliminate_emojis(content))
-            elif model[:2]=='v3':
-                text = tran_v3(eliminate_emojis(content),model,syst)
+            elif model[:2] == 'v3':
+                text = tran_v3(eliminate_emojis(content), model, syst)
         except Exception as e:
             print(e)
             try:
@@ -117,22 +125,25 @@ def google_tran(df,model,syst,filename,username):
                 except:
                     text = '翻译失败'
         trancontent.append(text)
-        completed+=1
-        progress = min(floor(completed/count*100),99)
-        if progress%5==0:
+        completed += 1
+        progress = min(floor(completed / count * 100), 99)
+        if progress % 5 == 0:
             try:
-                sql = 'update main_origin_files set progress=%s,completed_chars=%s where username="%s" and filename="%s"'%(str(progress),str(completed_chars),username,filename)
+                sql = 'update main_origin_files set progress=%s,completed_chars=%s where username="%s" and filename="%s"' % (
+                str(progress), str(completed_chars), username, filename)
                 print(sql)
-                conn = pymysql.connect(host="localhost", port=3306, user="ipsosuser1", password="Ipsos123456!", database="SAAS_translation",
+                conn = pymysql.connect(host="localhost", port=3306, user="ipsosuser1", password="Ipsos123456!",
+                                       database="SAAS_translation",
                                        charset="utf8")
-                cursor  = conn.cursor()
+                cursor = conn.cursor()
                 cursor.execute(sql)
                 conn.commit()
             except Exception as e:
                 print(e)
 
     df['_translated'] = trancontent
-    #df.to_excel(savefile)
+
+    df.to_excel("tmp"+datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')+".xlsx")
     return df
 
 
@@ -141,11 +152,12 @@ def google_tran(df,model,syst,filename,username):
 
 class MyThread(threading.Thread):
     completed = 0
-    def __init__(self,target,args=()):
-        super(MyThread,self).__init__()
+
+    def __init__(self, target, args=()):
+        super(MyThread, self).__init__()
         self.target = target
         self.args = args
-    
+
     def run(self):
         self.result = self.target(*self.args)
 
@@ -159,14 +171,14 @@ class MyThread(threading.Thread):
 # In[51]:
 
 
-
-if __name__=='__main__':
+if __name__ == '__main__':
     pymysql.install_as_MySQLdb()
-    conn = pymysql.connect(host="localhost",port=3306,user ="ipsosuser1", password ="Ipsos123456!",database ="SAAS_translation",charset ="utf8")
+    conn = pymysql.connect(host="localhost", port=3306, user="ipsosuser1", password="Ipsos123456!",
+                           database="SAAS_translation", charset="utf8")
     cursor = conn.cursor()
     parser = argparse.ArgumentParser()
-    parser.add_argument('-l','--loadfile',dest = "load", help = "pleaer enter the loadfile")
-    parser.add_argument('-s','--savefile',dest = "save", help = "pleaer enter the savefile")
+    parser.add_argument('-l', '--loadfile', dest="load", help="pleaer enter the loadfile")
+    parser.add_argument('-s', '--savefile', dest="save", help="pleaer enter the savefile")
     parser.add_argument('-m', '--model', dest="model", help="pleaer enter the savefile")
     parser.add_argument('-y', '--system', dest="syst", help="pleaer enter the savefile")
     parser.add_argument('-u', '--username', dest="username", help="pleaer enter the savefile")
@@ -181,54 +193,72 @@ if __name__=='__main__':
     print(r'----------------')
     print(r'----------------')
     print(r'----------------')
-    if (args.load[-3:]!='csv')and(args.load[-4:]!='xlsx') :
-        raise("读取文件路径有误")
-    if  args.save[-4:]!='xlsx':
+    if (args.load[-3:] != 'csv') and (args.load[-4:] != 'xlsx'):
+        raise ("读取文件路径有误")
+    if args.save[-4:] != 'xlsx':
         raise ("保存文件路径有误")
     if args.model is None:
         args.model = 'v3nmt'
     if args.syst is None:
         args.syst = 'win'
-    t_data=[]
+    t_data = []
     origin = os.path.basename(args.load)
     target = os.path.basename(args.save)
     username = args.username
     pid = os.getpid()
     print(pid)
-    sql = 'update main_origin_files set pid="%s" where filename="%s" and username="%s"'%(pid,origin,username)
+    sql = 'update main_origin_files set pid="%s" where filename="%s" and username="%s"' % (pid, origin, username)
     cursor.execute(sql)
     conn.commit()
-    #loadfile=r'C:\Users\hehao\google translate\test.xlsx'
-    #model='v2'
-    #syst='win'
+    # loadfile=r'C:\Users\hehao\google translate\test.xlsx'
+    # model='v2'
+    # syst='win'
     print('正在读取')
-    if args.load[-3:]=='csv':
-        df=pd.read_csv(args.load).astype('str')
+    if args.load[-3:] == 'csv':
+        df = pd.read_csv(args.load).astype('str')
     else:
-        df=pd.read_excel(args.load).astype('str')
-    df = df[['true_country','Date','Time', 'Mention Title']]
-    count=int(df.shape[0]/3)
-    t_list=[]
-    t_data=[]
-    t1=MyThread(target=google_tran,args=(df[0:count],args.model,args.syst,origin,username))
-    t2=MyThread(target=google_tran,args=(df[count:count*2],args.model,args.syst,origin,username))
-    t3=MyThread(target=google_tran,args=(df[count*2:],args.model,args.syst,origin,username))
-    for t in [t1,t2,t3]:
-        t.start()
-        t_list.append(t)
-    for t in t_list:
-        t.join()
-        t_data.append(t.get_result())
-    df_opt=pd.concat(t_data)
-    path = os.path.join(os.path.realpath(".."),'files',username,'target',args.save)
-    print(path,args.save,1)
-    df_opt.to_excel(os.path.join(os.path.realpath("."),'files',username,'target',args.save))
-    print('翻译结束')
+        df = pd.read_excel(args.load).astype('str')
+    df = df[['Date', 'Time', 'Mention Title']]
+    df["new_index"] = range(df.shape[0])
+    count = int(df.shape[0] / 3)
+
     try:
-        sql = 'update main_origin_files set progress=100,status=2 where filename="%s" and username="%s"'%(origin,username)
+        t_list = []
+        t_data = []
+        t1 = MyThread(target=google_tran, args=(df[0:count], args.model, args.syst, origin, username))
+        t2 = MyThread(target=google_tran, args=(df[count:count * 2], args.model, args.syst, origin, username))
+        t3 = MyThread(target=google_tran, args=(df[count * 2:], args.model, args.syst, origin, username))
+        # t4 = MyThread(target=google_tran, args=(df[count * 3:count * 4], args.model, args.syst, origin, username))
+        # t5 = MyThread(target=google_tran, args=(df[count * 4:count * 5], args.model, args.syst, origin, username))
+        # t6 = MyThread(target=google_tran, args=(df[count * 5:], args.model, args.syst, origin, username))
+
+        for t in [t1, t2, t3]:
+            t.start()
+            t_list.append(t)
+        for t in t_list:
+            t.join()
+            t_data.append(t.get_result())
+        print("线程合并")
+        df_opt = pd.concat(t_data)
+        df_opt = df_opt.sort_values(by = ["new_index"],ascending = [True])
+        del df_opt["new_index"]
+        path = os.path.join(os.path.realpath(".."), 'files', username, 'target', args.save)
+        print(path, args.save, 1)
+        df_opt.to_excel(os.path.join(os.path.realpath("."), 'files', username, 'target', args.save))
+        print('翻译结束')
+    except Exception as e:
+        sql = 'update main_origin_files set progress=100,status=2 where error_inf="%s"' % (e)
         print(sql)
         cursor.execute(sql)
-        sql = 'insert main_translated_files values(null,"%s","%s","%s")' % (origin,target,username)
+        conn.commit()
+        cursor.close()
+        conn.close()
+    try:
+        sql = 'update main_origin_files set progress=100,status=2 where filename="%s" and username="%s"' % (
+        origin, username)
+        print(sql)
+        cursor.execute(sql)
+        sql = 'insert main_translated_files values(null,"%s","%s","%s")' % (origin, target, username)
         print(sql)
         cursor.execute(sql)
         conn.commit()
@@ -237,9 +267,4 @@ if __name__=='__main__':
     except Exception as e:
         print(e)
 
-
 # In[ ]:
-
-
-
-

@@ -16,3 +16,12 @@ class translated_files(models.Model):
     target_filename = models.CharField(max_length=128)
     username = models.CharField(max_length=128)
 
+class translate_queue(models.Model):
+    filename = models.CharField(max_length=128)
+    username = models.CharField(max_length=128)
+    time = models.DateTimeField(auto_now=True)
+
+class translated_chars(models.Model):
+    time = models.DateTimeField(auto_now=True)
+    char_num = models.IntegerField()
+
